@@ -1,0 +1,14 @@
+images {
+  image: "/assets/key-w.png"
+}
+images {
+  image: "/assets/key-a.png"
+}
+images {
+  image: "/assets/key-s.png"
+}
+images {
+  image: "/assets/key-d.png"
+}
+extrude_borders: 2
+inner_padding: 0

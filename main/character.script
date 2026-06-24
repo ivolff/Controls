@@ -1,0 +1,72 @@
+local settings = require "settings"
+
+local ACTION_TO_BINDING = {
+	[hash("move_up")] = "w",
+	[hash("move_left")] = "a",
+	[hash("move_down")] = "s",
+	[hash("move_right")] = "d",
+}
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	self.movement = {
+		w = false,
+		a = false,
+		s = false,
+		d = false,
+	}
+
+	for binding, _ in pairs(self.movement) do
+		settings.pressed[binding] = false
+	end
+end
+
+function update(self, dt)
+	local bindings = settings.bindings
+	local dx = 0
+	local dy = 0
+
+	if bindings.w and self.movement.w then
+		dy = dy + 1
+	end
+	if bindings.s and self.movement.s then
+		dy = dy - 1
+	end
+	if bindings.d and self.movement.d then
+		dx = dx + 1
+	end
+	if bindings.a and self.movement.a then
+		dx = dx - 1
+	end
+
+	if dx == 0 and dy == 0 then
+		return
+	end
+
+	if dx ~= 0 and dy ~= 0 then
+		local diagonal = 0.70710678118
+		dx = dx * diagonal
+		dy = dy * diagonal
+	end
+
+	local position = go.get_position()
+	position.x = position.x + dx * settings.move_speed * dt
+	position.y = position.y + dy * settings.move_speed * dt
+	go.set_position(position)
+end
+
+function on_input(self, action_id, action)
+	local binding = ACTION_TO_BINDING[action_id]
+	if not binding then
+		return false
+	end
+
+	if action.pressed then
+		self.movement[binding] = settings.bindings[binding] == true
+	elseif action.released then
+		self.movement[binding] = false
+	end
+
+	settings.pressed[binding] = self.movement[binding]
+	return true
+end
