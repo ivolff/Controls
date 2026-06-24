@@ -14,5 +14,9 @@ embedded_instances {
   "  id: \"pressed_keys\"\n"
   "  component: \"/main/pressed_keys.gui\"\n"
   "}\n"
+  "components {\n"
+  "  id: \"button_status\"\n"
+  "  component: \"/main/button_status.gui\"\n"
+  "}\n"
   ""
 }

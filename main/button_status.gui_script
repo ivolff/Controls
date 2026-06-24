@@ -1,0 +1,99 @@
+local settings = require "settings"
+
+local ORDERED_BINDINGS = { "w", "a", "s", "d" }
+local TRUE_COLOR = vmath.vector4(0.35, 1, 0.45, 1)
+local FALSE_COLOR = vmath.vector4(1, 0.45, 0.35, 1)
+local SWITCH_ON_COLOR = vmath.vector4(0.16, 0.62, 0.24, 1)
+local SWITCH_OFF_COLOR = vmath.vector4(0.48, 0.18, 0.16, 1)
+local SWITCH_KNOB_COLOR = vmath.vector4(1, 1, 1, 1)
+local SWITCH_KNOB_X = {
+	on = -24,
+	off = -64,
+}
+
+local function update_flag_text(self)
+	for _, binding in ipairs(ORDERED_BINDINGS) do
+		local binding_on = settings.bindings[binding] == true
+		local pressed_on = settings.pressed[binding] == true
+		local binding_value = self.flag_nodes[binding].binding
+		local pressed_value = self.flag_nodes[binding].pressed
+		local switch = self.switch_nodes[binding]
+
+		gui.set_text(binding_value, binding_on and "ON" or "OFF")
+		gui.set_color(binding_value, binding_on and TRUE_COLOR or FALSE_COLOR)
+		gui.set_color(switch.track, binding_on and SWITCH_ON_COLOR or SWITCH_OFF_COLOR)
+		gui.set_color(switch.knob, SWITCH_KNOB_COLOR)
+		gui.set_position(switch.knob, vmath.vector3(binding_on and SWITCH_KNOB_X.on or SWITCH_KNOB_X.off, switch.y, 0))
+		gui.set_text(pressed_value, pressed_on and "DOWN" or "UP")
+		gui.set_color(pressed_value, pressed_on and TRUE_COLOR or FALSE_COLOR)
+	end
+end
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	self.flag_nodes = {
+		w = {
+			binding = gui.get_node("flag_w_binding_value"),
+			pressed = gui.get_node("flag_w_pressed_value"),
+		},
+		a = {
+			binding = gui.get_node("flag_a_binding_value"),
+			pressed = gui.get_node("flag_a_pressed_value"),
+		},
+		s = {
+			binding = gui.get_node("flag_s_binding_value"),
+			pressed = gui.get_node("flag_s_pressed_value"),
+		},
+		d = {
+			binding = gui.get_node("flag_d_binding_value"),
+			pressed = gui.get_node("flag_d_pressed_value"),
+		},
+	}
+	self.switch_nodes = {
+		w = {
+			track = gui.get_node("flag_w_binding_switch"),
+			knob = gui.get_node("flag_w_binding_knob"),
+			y = -2,
+		},
+		a = {
+			track = gui.get_node("flag_a_binding_switch"),
+			knob = gui.get_node("flag_a_binding_knob"),
+			y = -30,
+		},
+		s = {
+			track = gui.get_node("flag_s_binding_switch"),
+			knob = gui.get_node("flag_s_binding_knob"),
+			y = -58,
+		},
+		d = {
+			track = gui.get_node("flag_d_binding_switch"),
+			knob = gui.get_node("flag_d_binding_knob"),
+			y = -86,
+		},
+	}
+	update_flag_text(self)
+end
+
+function update(self, dt)
+	update_flag_text(self)
+end
+
+function on_input(self, action_id, action)
+	if action_id ~= hash("touch") or not action.pressed then
+		return false
+	end
+
+	for _, binding in ipairs(ORDERED_BINDINGS) do
+		local switch = self.switch_nodes[binding]
+		if gui.pick_node(switch.track, action.x, action.y) or gui.pick_node(switch.knob, action.x, action.y) or gui.pick_node(self.flag_nodes[binding].binding, action.x, action.y) then
+			settings.bindings[binding] = not settings.bindings[binding]
+			if not settings.bindings[binding] then
+				settings.pressed[binding] = false
+			end
+			update_flag_text(self)
+			return true
+		end
+	end
+
+	return false
+end

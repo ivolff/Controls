@@ -21,4 +21,5 @@ scale_mode = stretch
 
 [project]
 title = Controls
+dependencies#0 = https://github.com/Insality/druid/archive/refs/tags/1.2.0.zip
 

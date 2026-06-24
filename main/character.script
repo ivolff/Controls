@@ -26,6 +26,13 @@ function update(self, dt)
 	local dx = 0
 	local dy = 0
 
+	for binding, enabled in pairs(bindings) do
+		if not enabled then
+			self.movement[binding] = false
+			settings.pressed[binding] = false
+		end
+	end
+
 	if bindings.w and self.movement.w then
 		dy = dy + 1
 	end
