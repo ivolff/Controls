@@ -8,12 +8,18 @@ local NODE_TEMPLATE_ID = "node_template/node"
 local BUTTONS_COLOR = vmath.vector4(77 / 255, 143 / 255, 235 / 255, 1)
 local ACTIONS_COLOR = vmath.vector4(56 / 255, 189 / 255, 133 / 255, 1)
 local CONNECTION_COLOR = vmath.vector4(1, 1, 1, 0.85)
+local ADD_BUTTON_TEXT_COLOR = vmath.vector4(1, 1, 1, 1)
 local CONNECTION_WIDTH = 4
+local ADD_BUTTON_X = 420
+local ADD_BUTTON_START_Y = 280
+local ADD_BUTTON_SPACING = 62
+local ADD_BUTTON_SIZE = vmath.vector3(128, 44, 0)
+local NODE_SPAWN_START = vmath.vector3(-320, 260, 0)
+local NODE_SPAWN_STEP = vmath.vector3(36, -36, 0)
 local NODE_CONFIG = {
 	{
 		name = "W",
 		color = BUTTONS_COLOR,
-		position = vmath.vector3(-300, 200, 0),
 		right_ear = true,
 		left_ear = false,
 		type = state.types.W,
@@ -21,7 +27,6 @@ local NODE_CONFIG = {
 	{
 		name = "A",
 		color = BUTTONS_COLOR,
-		position = vmath.vector3(-300, 100, 0),
 		right_ear = true,
 		left_ear = false,
 		type = state.types.A,
@@ -29,7 +34,6 @@ local NODE_CONFIG = {
 	{
 		name = "S",
 		color = BUTTONS_COLOR,
-		position = vmath.vector3(-300, 0, 0),
 		right_ear = true,
 		left_ear = false,
 		type = state.types.S,
@@ -37,7 +41,6 @@ local NODE_CONFIG = {
 	{
 		name = "D",
 		color = BUTTONS_COLOR,
-		position = vmath.vector3(-300, -100, 0),
 		right_ear = true,
 		left_ear = false,
 		type = state.types.D,
@@ -45,7 +48,6 @@ local NODE_CONFIG = {
 	{
 		name = "Step Up",
 		color = ACTIONS_COLOR,
-		position = vmath.vector3(300, 200, 0),
 		right_ear = true,
 		left_ear = true,
 		type = state.types.UP,
@@ -53,7 +55,6 @@ local NODE_CONFIG = {
 	{
 		name = "Step Left",
 		color = ACTIONS_COLOR,
-		position = vmath.vector3(300, 100, 0),
 		right_ear = true,
 		left_ear = true,
 		type = state.types.LEFT,
@@ -61,7 +62,6 @@ local NODE_CONFIG = {
 	{
 		name = "Step Down",
 		color = ACTIONS_COLOR,
-		position = vmath.vector3(300, 0, 0),
 		right_ear = true,
 		left_ear = true,
 		type = state.types.DOWN,
@@ -69,7 +69,6 @@ local NODE_CONFIG = {
 	{
 		name = "Step Right",
 		color = ACTIONS_COLOR,
-		position = vmath.vector3(300, -100, 0),
 		right_ear = true,
 		left_ear = true,
 		type = state.types.RIGHT,
@@ -90,6 +89,12 @@ local function set_node_enabled(node, enabled)
 	if node then
 		gui.set_enabled(node, enabled)
 	end
+end
+
+local function get_next_spawn_position(self)
+	local index = self.next_spawn_index or 0
+	self.next_spawn_index = index + 1
+	return NODE_SPAWN_START + NODE_SPAWN_STEP * index
 end
 
 local function connection_exists(connections, from_node, to_node)
@@ -131,6 +136,16 @@ local function pick_node(self, x, y)
 		local node_data = self.spawned_nodes[index]
 		if gui.pick_node(node_data.node, x, y) then
 			return node_data
+		end
+	end
+
+	return nil
+end
+
+local function pick_add_button(self, x, y)
+	for _, button_data in ipairs(self.add_buttons) do
+		if gui.pick_node(button_data.node, x, y) then
+			return button_data.config
 		end
 	end
 
@@ -209,59 +224,137 @@ local function remove_connections_to_node(self, to_node)
 	return removed_count
 end
 
-local function spawn_configured_nodes(self)
+local function remove_node_connections(self, node_data)
+	for index = #self.connections, 1, -1 do
+		local connection = self.connections[index]
+		if connection.from_node == node_data or connection.to_node == node_data then
+			state.remove_connection(connection.from_node.num, connection.to_node.num)
+			gui.delete_node(connection.line)
+			table.remove(self.connections, index)
+		end
+	end
+end
+
+local function remove_spawned_node(self, node_data)
+	remove_node_connections(self, node_data)
+	state.remove_node(node_data.num)
+
+	for index = #self.spawned_nodes, 1, -1 do
+		if self.spawned_nodes[index] == node_data then
+			table.remove(self.spawned_nodes, index)
+			break
+		end
+	end
+
+	if self.dragging_connection == node_data then
+		self.dragging_connection = nil
+	end
+
+	if self.dragging_node and self.dragging_node.node_data == node_data then
+		self.dragging_node = nil
+	end
+
+	gui.delete_node(node_data.node)
+end
+
+local function spawn_node(self, config, position)
 	local template = gui.get_node(NODE_TEMPLATE_ID)
-	--gui.set_enabled(gui.get_node(NODE_TEMPLATE_ROOT_ID), false)
-	self.spawned_nodes = {}
+	local cloned_nodes = gui.clone_tree(template)
+	local node = cloned_node(cloned_nodes, "node_template/node") or cloned_node(cloned_nodes, "node")
+	local name = cloned_node(cloned_nodes, "node_template/name") or cloned_node(cloned_nodes, "name")
+	local right_ear = cloned_node(cloned_nodes, "node_template/right_ear") or cloned_node(cloned_nodes, "right_ear")
+	local left_ear = cloned_node(cloned_nodes, "node_template/left_ear") or cloned_node(cloned_nodes, "left_ear")
 
-	for _, config in ipairs(NODE_CONFIG) do
-		local cloned_nodes = gui.clone_tree(template)
-		local node = cloned_node(cloned_nodes, "node_template/node") or cloned_node(cloned_nodes, "node")
-		local name = cloned_node(cloned_nodes, "node_template/name") or cloned_node(cloned_nodes, "name")
-		local right_ear = cloned_node(cloned_nodes, "node_template/right_ear") or cloned_node(cloned_nodes, "right_ear")
-		local left_ear = cloned_node(cloned_nodes, "node_template/left_ear") or cloned_node(cloned_nodes, "left_ear")
+	gui.set_parent(node, self.flags_panel, false)
+	gui.set_position(node, position)
+	gui.set_text(name, config.name)
+	set_node_color(node, config.color)
+	set_node_color(right_ear, config.color)
+	set_node_color(left_ear, config.color)
+	set_node_enabled(right_ear, config.right_ear)
+	set_node_enabled(left_ear, config.left_ear)
 
-		gui.set_parent(node, self.flags_panel, false)
-		gui.set_position(node, config.position)
-		gui.set_text(name, config.name)
-		set_node_color(node, config.color)
-		set_node_color(right_ear, config.color)
-		set_node_color(left_ear, config.color)
-		set_node_enabled(right_ear, config.right_ear)
-		set_node_enabled(left_ear, config.left_ear)
-		table.insert(self.spawned_nodes, {
-			num = state.add_node(config.type),
-			name = config.name,
-			nodes = cloned_nodes,
-			node = node,
-			right_ear = right_ear,
-			right_ear_clicker = cloned_node(cloned_nodes, "node_template/right_ear_clicker") or cloned_node(cloned_nodes, "right_ear_clicker"),
-			right_ear_enabled = config.right_ear,
-			left_ear = left_ear,
-			left_ear_clicker = cloned_node(cloned_nodes, "node_template/left_ear_clicker") or cloned_node(cloned_nodes, "left_ear_clicker"),
-			left_ear_enabled = config.left_ear,
+	local node_data = {
+		num = state.add_node(config.type),
+		name = config.name,
+		nodes = cloned_nodes,
+		node = node,
+		right_ear = right_ear,
+		right_ear_clicker = cloned_node(cloned_nodes, "node_template/right_ear_clicker") or cloned_node(cloned_nodes, "right_ear_clicker"),
+		right_ear_enabled = config.right_ear,
+		left_ear = left_ear,
+		left_ear_clicker = cloned_node(cloned_nodes, "node_template/left_ear_clicker") or cloned_node(cloned_nodes, "left_ear_clicker"),
+		left_ear_enabled = config.left_ear,
+	}
+
+	table.insert(self.spawned_nodes, node_data)
+	return node_data
+end
+
+local function create_add_buttons(self)
+	self.add_buttons = {}
+
+	for index, config in ipairs(NODE_CONFIG) do
+		local y = ADD_BUTTON_START_Y - (index - 1) * ADD_BUTTON_SPACING
+		local button = gui.new_box_node(vmath.vector3(ADD_BUTTON_X, y, 0), ADD_BUTTON_SIZE)
+		local label = gui.new_text_node(vmath.vector3(0, 0, 1), config.name)
+
+		gui.set_parent(button, self.flags_panel, false)
+		gui.set_parent(label, button, false)
+		gui.set_size(label, ADD_BUTTON_SIZE)
+		gui.set_color(button, config.color)
+		gui.set_color(label, ADD_BUTTON_TEXT_COLOR)
+
+		table.insert(self.add_buttons, {
+			config = config,
+			node = button,
+			label = label,
 		})
 	end
 end
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
+	state.reset()
 	self.flags_panel = gui.get_node("flags_panel")
 	self.connections = {}
+	self.spawned_nodes = {}
+	self.add_buttons = {}
+	self.next_spawn_index = 0
 	self.dragging_connection = nil
 	self.dragging_node = nil
-	spawn_configured_nodes(self)
+	create_add_buttons(self)
 end
 
 function update(self, dt)
 end
 
 function on_input(self, action_id, action)
-	if action_id ~= hash("touch") and not (self.dragging_node and action.x and action.y) then
+	if action_id ~= hash("touch")
+		and action_id ~= hash("remove_node")
+		and not (self.dragging_node and action.x and action.y) then
+		return false
+	end
+
+	if action_id == hash("remove_node") then
+		if action.pressed then
+			local node_data = pick_node(self, action.x, action.y)
+			if node_data then
+				remove_spawned_node(self, node_data)
+				return true
+			end
+		end
+
 		return false
 	end
 
 	if action.pressed then
+		local add_config = pick_add_button(self, action.x, action.y)
+		if add_config then
+			spawn_node(self, add_config, get_next_spawn_position(self))
+			return true
+		end
+
 		self.dragging_connection = pick_right_ear(self, action.x, action.y)
 		if self.dragging_connection then
 			return true

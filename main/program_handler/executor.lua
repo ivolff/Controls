@@ -56,17 +56,19 @@ local function finish_current_node()
 end
 
 local function start_next_node()
-    local num = table.remove(execution_queue, 1)
-    local node = state.nodes[num]
-    if not node then
-        return false
+    while #execution_queue > 0 do
+        local num = table.remove(execution_queue, 1)
+        local node = state.nodes[num]
+        if node and not node.deleted then
+            current_node = node
+            execute_node(node)
+            current_time_left = get_execution_time(node)
+
+            return true
+        end
     end
 
-    current_node = node
-    execute_node(node)
-    current_time_left = get_execution_time(node)
-
-    return true
+    return false
 end
 
 function M.start(type)
@@ -79,7 +81,7 @@ function M.start(type)
     current_time_left = 0
 
     for _,v in ipairs(state.nodes) do
-        if v.type == type then
+        if not v.deleted and v.type == type then
             enqueue_node(v.num)
         end
     end
@@ -89,7 +91,7 @@ end
 
 function M.execute(num)
     local node = state.nodes[num]
-    if not node then
+    if not node or node.deleted then
         return
     end
 

@@ -2,6 +2,10 @@ mouse_trigger {
   input: MOUSE_BUTTON_1
   action: "touch"
 }
+mouse_trigger {
+  input: MOUSE_BUTTON_2
+  action: "remove_node"
+}
 key_trigger {
   input: KEY_W
   action: "move_up"
