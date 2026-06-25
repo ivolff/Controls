@@ -1,0 +1,16 @@
+go.property("velocity", vmath.vector3())
+go.property("lifetime", 1)
+
+function init(self)
+	self.time_left = self.lifetime
+	go.set("#sprite", "tint", vmath.vector4(1, 0.84, 0.2, 1))
+end
+
+function update(self, dt)
+	go.set_position(go.get_position() + self.velocity * dt)
+
+	self.time_left = self.time_left - dt
+	if self.time_left <= 0 then
+		go.delete()
+	end
+end

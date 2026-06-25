@@ -73,6 +73,27 @@ local NODE_CONFIG = {
 		left_ear = true,
 		type = state.types.RIGHT,
 	},
+	{
+		name = "Shoot",
+		color = ACTIONS_COLOR,
+		right_ear = true,
+		left_ear = true,
+		type = state.types.SHOOT,
+	},
+	{
+		name = "Rotate Left",
+		color = ACTIONS_COLOR,
+		right_ear = true,
+		left_ear = true,
+		type = state.types.ROTATE_LEFT,
+	},
+	{
+		name = "Rotate Right",
+		color = ACTIONS_COLOR,
+		right_ear = true,
+		left_ear = true,
+		type = state.types.ROTATE_RIGHT,
+	},
 }
 
 local function cloned_node(cloned_nodes, id)

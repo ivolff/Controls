@@ -2,16 +2,16 @@ local settings = require "settings"
 local state = require("main.program_handler.state")
 
 local M = {}
-local execution_queue = {}
-local current_node = nil
-local current_time_left = 0
-local is_executing = false
+local executions = {}
 
 local COMMAND_TYPE_TO_SETTINGS_KEY = {
     [state.types.UP] = "up",
     [state.types.LEFT] = "left",
     [state.types.DOWN] = "down",
     [state.types.RIGHT] = "right",
+    [state.types.SHOOT] = "shoot",
+    [state.types.ROTATE_LEFT] = "rotate_left",
+    [state.types.ROTATE_RIGHT] = "rotate_right",
 }
 
 local function is_action_node(node)
@@ -19,6 +19,9 @@ local function is_action_node(node)
         or node.type == state.types.DOWN
         or node.type == state.types.LEFT
         or node.type == state.types.RIGHT
+        or node.type == state.types.SHOOT
+        or node.type == state.types.ROTATE_LEFT
+        or node.type == state.types.ROTATE_RIGHT
 end
 
 local function execute_node(node)
@@ -38,31 +41,31 @@ local function get_execution_time(node)
     return settings.command_execution_times[settings_key] or 0
 end
 
-local function enqueue_node(num)
-    table.insert(execution_queue, num)
+local function enqueue_node(execution, num)
+    table.insert(execution.queue, num)
 end
 
-local function finish_current_node()
-    if not current_node then
+local function finish_current_node(execution)
+    if not execution.current_node then
         return
     end
 
-    for _, next_num in ipairs(current_node.to) do
-        enqueue_node(next_num)
+    for _, next_num in ipairs(execution.current_node.to) do
+        enqueue_node(execution, next_num)
     end
 
-    current_node = nil
-    current_time_left = 0
+    execution.current_node = nil
+    execution.current_time_left = 0
 end
 
-local function start_next_node()
-    while #execution_queue > 0 do
-        local num = table.remove(execution_queue, 1)
+local function start_next_node(execution)
+    while #execution.queue > 0 do
+        local num = table.remove(execution.queue, 1)
         local node = state.nodes[num]
         if node and not node.deleted then
-            current_node = node
+            execution.current_node = node
             execute_node(node)
-            current_time_left = get_execution_time(node)
+            execution.current_time_left = get_execution_time(node)
 
             return true
         end
@@ -72,21 +75,21 @@ local function start_next_node()
 end
 
 function M.start(type)
-    if is_executing then
-        return
-    end
-
-    execution_queue = {}
-    current_node = nil
-    current_time_left = 0
+    local execution = {
+        queue = {},
+        current_node = nil,
+        current_time_left = 0,
+    }
 
     for _,v in ipairs(state.nodes) do
         if not v.deleted and v.type == type then
-            enqueue_node(v.num)
+            enqueue_node(execution, v.num)
         end
     end
 
-    is_executing = #execution_queue > 0
+    if #execution.queue > 0 then
+        table.insert(executions, execution)
+    end
 end
 
 function M.execute(num)
@@ -98,33 +101,39 @@ function M.execute(num)
     execute_node(node)
 end
 
-function M.update(dt)
-    if not is_executing then
-        return
-    end
-
-    if current_node then
-        current_time_left = current_time_left - dt
-        if current_time_left > 0 then
-            return
-        end
-
-        finish_current_node()
-    end
-
+local function update_execution(execution, dt)
     local steps_left = math.max(settings.max_execution_steps_per_update or 100, 1)
+
+    if execution.current_node then
+        execution.current_time_left = execution.current_time_left - dt
+        if execution.current_time_left > 0 then
+            return true
+        end
+
+        finish_current_node(execution)
+    end
+
     while steps_left > 0 do
-        if not start_next_node() then
-            is_executing = false
-            return
+        if not start_next_node(execution) then
+            return false
         end
 
-        if current_time_left > 0 then
-            return
+        if execution.current_time_left > 0 then
+            return true
         end
 
-        finish_current_node()
+        finish_current_node(execution)
         steps_left = steps_left - 1
+    end
+
+    return true
+end
+
+function M.update(dt)
+    for index = #executions, 1, -1 do
+        if not update_execution(executions[index], dt) then
+            table.remove(executions, index)
+        end
     end
 end
 

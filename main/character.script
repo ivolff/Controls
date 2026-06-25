@@ -18,11 +18,20 @@ local BINDING_TO_STEP = {
 	[state.types.RIGHT] = vmath.vector3(1, 0, 0),
 }
 
+local SHOOT_OFFSET = 24
+local ROTATION_STEP = math.pi * 0.5
+
+local function get_forward(angle)
+	return vmath.vector3(math.cos(angle), math.sin(angle), 0)
+end
+
 function init(self)
 	msg.post(".", "acquire_input_focus")
+	self.facing_angle = 0
 	for binding, _ in pairs(settings.pressed) do
 		settings.pressed[binding] = false
 	end
+	go.set("#barrel", "tint", vmath.vector4(0.12, 0.12, 0.12, 1))
 end
 
 function on_input(self, action_id, action)
@@ -47,6 +56,30 @@ function on_message(self, message_id, message)
 		return
 	end
 
-	go.set_position(go.get_position() + BINDING_TO_STEP[message.binding] * settings.move_step)
+	if message.binding == state.types.SHOOT then
+		local forward = get_forward(self.facing_angle)
+		factory.create("#bullet_factory", go.get_position() + forward * SHOOT_OFFSET, vmath.quat_rotation_z(self.facing_angle), {
+			velocity = forward * settings.bullet_speed,
+			lifetime = settings.bullet_lifetime,
+		})
+		return
+	end
+
+	if message.binding == state.types.ROTATE_LEFT then
+		self.facing_angle = self.facing_angle + ROTATION_STEP
+		go.set_rotation(vmath.quat_rotation_z(self.facing_angle))
+		return
+	end
+
+	if message.binding == state.types.ROTATE_RIGHT then
+		self.facing_angle = self.facing_angle - ROTATION_STEP
+		go.set_rotation(vmath.quat_rotation_z(self.facing_angle))
+		return
+	end
+
+	local step = BINDING_TO_STEP[message.binding]
+	if step then
+		go.set_position(go.get_position() + step * settings.move_step)
+	end
 
 end

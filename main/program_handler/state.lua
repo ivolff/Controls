@@ -9,6 +9,9 @@ M.types = {
     LEFT = 6,
     DOWN = 7,
     RIGHT = 8,
+    SHOOT = 9,
+    ROTATE_LEFT = 10,
+    ROTATE_RIGHT = 11,
 }
 
 
