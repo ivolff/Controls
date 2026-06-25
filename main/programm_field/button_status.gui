@@ -1,0 +1,90 @@
+script: "/main/programm_field/button_status.gui_script"
+fonts {
+  name: "default"
+  font: "/builtins/fonts/default.font"
+}
+nodes {
+  position {
+    x: 1389.0
+    y: 652.0
+  }
+  size {
+    x: 1000.0
+    y: 800.0
+  }
+  color {
+    x: 0.8
+    y: 0.6
+    z: 0.8
+  }
+  type: TYPE_BOX
+  id: "flags_panel"
+  xanchor: XANCHOR_RIGHT
+  yanchor: YANCHOR_TOP
+  alpha: 0.72
+}
+nodes {
+  position {
+    x: -439.0
+    y: 383.0
+  }
+  scale {
+    x: 0.82
+    y: 0.82
+  }
+  type: TYPE_TEXT
+  text: "settings flags"
+  font: "default"
+  id: "flags_title"
+  xanchor: XANCHOR_RIGHT
+  yanchor: YANCHOR_TOP
+  parent: "flags_panel"
+}
+nodes {
+  position {
+    x: 2071.0
+    y: 1452.0
+  }
+  type: TYPE_TEMPLATE
+  id: "node_template"
+  inherit_alpha: true
+  template: "/main/programm_field/node_template.gui"
+}
+nodes {
+  type: TYPE_BOX
+  id: "node_template/node"
+  parent: "node_template"
+  template_node_child: true
+}
+nodes {
+  type: TYPE_BOX
+  id: "node_template/right_ear"
+  parent: "node_template/node"
+  template_node_child: true
+}
+nodes {
+  type: TYPE_PIE
+  id: "node_template/right_ear_clicker"
+  parent: "node_template/right_ear"
+  template_node_child: true
+}
+nodes {
+  type: TYPE_BOX
+  id: "node_template/left_ear"
+  parent: "node_template/node"
+  template_node_child: true
+}
+nodes {
+  type: TYPE_PIE
+  id: "node_template/left_ear_clicker"
+  parent: "node_template/left_ear"
+  template_node_child: true
+}
+nodes {
+  type: TYPE_TEXT
+  id: "node_template/name"
+  parent: "node_template/node"
+  template_node_child: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

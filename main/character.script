@@ -1,65 +1,28 @@
 local settings = require "settings"
+local executor = require "main.program_handler.executor"
+local state = require "main.program_handler.state"
+
 
 local ACTION_TO_BINDING = {
-	[hash("move_up")] = "w",
-	[hash("move_left")] = "a",
-	[hash("move_down")] = "s",
-	[hash("move_right")] = "d",
+	[hash("move_up")] = state.types.W,
+	[hash("move_left")] = state.types.A,
+	[hash("move_down")] = state.types.S,
+	[hash("move_right")] = state.types.D,
+}
+
+
+local BINDING_TO_STEP = {
+	[state.types.UP] = vmath.vector3(0, 1, 0),
+	[state.types.LEFT] = vmath.vector3(-1, 0, 0),
+	[state.types.DOWN] = vmath.vector3(0, -1, 0),
+	[state.types.RIGHT] = vmath.vector3(1, 0, 0),
 }
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
-	self.movement = {
-		w = false,
-		a = false,
-		s = false,
-		d = false,
-	}
-
-	for binding, _ in pairs(self.movement) do
+	for binding, _ in pairs(settings.pressed) do
 		settings.pressed[binding] = false
 	end
-end
-
-function update(self, dt)
-	local bindings = settings.bindings
-	local dx = 0
-	local dy = 0
-
-	for binding, enabled in pairs(bindings) do
-		if not enabled then
-			self.movement[binding] = false
-			settings.pressed[binding] = false
-		end
-	end
-
-	if bindings.w and self.movement.w then
-		dy = dy + 1
-	end
-	if bindings.s and self.movement.s then
-		dy = dy - 1
-	end
-	if bindings.d and self.movement.d then
-		dx = dx + 1
-	end
-	if bindings.a and self.movement.a then
-		dx = dx - 1
-	end
-
-	if dx == 0 and dy == 0 then
-		return
-	end
-
-	if dx ~= 0 and dy ~= 0 then
-		local diagonal = 0.70710678118
-		dx = dx * diagonal
-		dy = dy * diagonal
-	end
-
-	local position = go.get_position()
-	position.x = position.x + dx * settings.move_speed * dt
-	position.y = position.y + dy * settings.move_speed * dt
-	go.set_position(position)
 end
 
 function on_input(self, action_id, action)
@@ -69,11 +32,17 @@ function on_input(self, action_id, action)
 	end
 
 	if action.pressed then
-		self.movement[binding] = settings.bindings[binding] == true
-	elseif action.released then
-		self.movement[binding] = false
+		executor.start(binding)
+	end
+	
+	return true
+end
+
+function on_message(self, message_id, message)
+	if message_id ~= hash("character_input") then
+		return
 	end
 
-	settings.pressed[binding] = self.movement[binding]
-	return true
+	go.set_position(go.get_position() + BINDING_TO_STEP[message.binding] * settings.move_step)
+
 end

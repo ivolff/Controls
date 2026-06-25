@@ -11,12 +11,8 @@ scale_along_z: 0
 embedded_instances {
   id: "go"
   data: "components {\n"
-  "  id: \"pressed_keys\"\n"
-  "  component: \"/main/pressed_keys.gui\"\n"
-  "}\n"
-  "components {\n"
   "  id: \"button_status\"\n"
-  "  component: \"/main/button_status.gui\"\n"
+  "  component: \"/main/programm_field/button_status.gui\"\n"
   "}\n"
   ""
 }

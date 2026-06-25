@@ -1,0 +1,93 @@
+fonts {
+  name: "default"
+  font: "/builtins/fonts/default.font"
+}
+nodes {
+  size {
+    x: 128.0
+    y: 64.0
+  }
+  color {
+    x: 0.4
+    y: 0.5019608
+    z: 0.9019608
+  }
+  type: TYPE_BOX
+  id: "node"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 80.0
+  }
+  size {
+    x: 32.0
+    y: 32.0
+  }
+  color {
+    x: 0.4
+    y: 0.5019608
+    z: 0.9019608
+  }
+  type: TYPE_BOX
+  id: "right_ear"
+  parent: "node"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  size {
+    x: 16.0
+    y: 16.0
+  }
+  type: TYPE_PIE
+  id: "right_ear_clicker"
+  parent: "right_ear"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: -80.0
+  }
+  size {
+    x: 32.0
+    y: 32.0
+  }
+  color {
+    x: 0.4
+    y: 0.5019608
+    z: 0.9019608
+  }
+  type: TYPE_BOX
+  id: "left_ear"
+  parent: "node"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  size {
+    x: 16.0
+    y: 16.0
+  }
+  type: TYPE_PIE
+  id: "left_ear_clicker"
+  parent: "left_ear"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  size {
+    x: 128.0
+    y: 64.0
+  }
+  type: TYPE_TEXT
+  text: "<text>"
+  font: "default"
+  id: "name"
+  parent: "node"
+  inherit_alpha: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

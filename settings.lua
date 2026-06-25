@@ -1,6 +1,6 @@
 local M = {}
 
-M.move_speed = 220
+M.move_step = 16
 
 M.bindings = {
 	w = true,
