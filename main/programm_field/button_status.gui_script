@@ -126,24 +126,55 @@ local function pick_left_ear(self, x, y)
 	return nil
 end
 
+local function pick_node(self, x, y)
+	for index = #self.spawned_nodes, 1, -1 do
+		local node_data = self.spawned_nodes[index]
+		if gui.pick_node(node_data.node, x, y) then
+			return node_data
+		end
+	end
+
+	return nil
+end
+
 local function get_ear_position(node_data, ear)
 	return gui.get_position(node_data.node) + gui.get_position(ear)
 end
 
-local function create_connection_line(self, from_node, to_node)
+local function update_connection_line(connection)
+	local from_node = connection.from_node
+	local to_node = connection.to_node
 	local from_position = get_ear_position(from_node, from_node.right_ear)
 	local to_position = get_ear_position(to_node, to_node.left_ear)
 	local dx = to_position.x - from_position.x
 	local dy = to_position.y - from_position.y
 	local length = math.sqrt(dx * dx + dy * dy)
 	local midpoint = vmath.vector3(from_position.x + dx * 0.5, from_position.y + dy * 0.5, -1)
-	local line = gui.new_box_node(vmath.vector3(0, 0, 0), vmath.vector3(length, CONNECTION_WIDTH, 0))
+
+	gui.set_size(connection.line, vmath.vector3(length, CONNECTION_WIDTH, 0))
+	gui.set_position(connection.line, midpoint)
+	gui.set_rotation(connection.line, vmath.quat_rotation_z(math.atan2(dy, dx)))
+end
+
+local function update_node_connections(self, node_data)
+	for _, connection in ipairs(self.connections) do
+		if connection.from_node == node_data or connection.to_node == node_data then
+			update_connection_line(connection)
+		end
+	end
+end
+
+local function create_connection_line(self, from_node, to_node)
+	local line = gui.new_box_node(vmath.vector3(0, 0, 0), vmath.vector3(0, CONNECTION_WIDTH, 0))
+	local connection = {
+		from_node = from_node,
+		to_node = to_node,
+		line = line,
+	}
 
 	gui.set_parent(line, self.flags_panel, false)
-	gui.set_position(line, midpoint)
-	gui.set_rotation(line, vmath.quat_rotation_z(math.atan2(dy, dx)))
 	gui.set_color(line, CONNECTION_COLOR)
-
+	update_connection_line(connection)
 	return line
 end
 
@@ -218,6 +249,7 @@ function init(self)
 	self.flags_panel = gui.get_node("flags_panel")
 	self.connections = {}
 	self.dragging_connection = nil
+	self.dragging_node = nil
 	spawn_configured_nodes(self)
 end
 
@@ -225,7 +257,7 @@ function update(self, dt)
 end
 
 function on_input(self, action_id, action)
-	if action_id ~= hash("touch") then
+	if action_id ~= hash("touch") and not (self.dragging_node and action.x and action.y) then
 		return false
 	end
 
@@ -240,6 +272,16 @@ function on_input(self, action_id, action)
 			remove_connections_to_node(self, left_ear_node)
 			return true
 		end
+
+		local node_data = pick_node(self, action.x, action.y)
+		if node_data then
+			self.dragging_node = {
+				node_data = node_data,
+				last_x = action.x,
+				last_y = action.y,
+			}
+			return true
+		end
 	end
 
 	if action.released and self.dragging_connection then
@@ -251,6 +293,25 @@ function on_input(self, action_id, action)
 			connect_nodes(self, from_node, to_node)
 			return true
 		end
+	end
+
+	if self.dragging_node then
+		local drag = self.dragging_node
+		local node_data = drag.node_data
+		local position = gui.get_position(node_data.node)
+		local dx = action.x - drag.last_x
+		local dy = action.y - drag.last_y
+
+		gui.set_position(node_data.node, position + vmath.vector3(dx, dy, 0))
+		drag.last_x = action.x
+		drag.last_y = action.y
+		update_node_connections(self, node_data)
+
+		if action.released then
+			self.dragging_node = nil
+		end
+
+		return true
 	end
 
 	return false

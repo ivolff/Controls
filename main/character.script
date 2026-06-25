@@ -38,6 +38,10 @@ function on_input(self, action_id, action)
 	return true
 end
 
+function update(self, dt)
+	executor.update(dt)
+end
+
 function on_message(self, message_id, message)
 	if message_id ~= hash("character_input") then
 		return
